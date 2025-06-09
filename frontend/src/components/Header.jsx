@@ -34,7 +34,7 @@ const Header = () => {
 
           <div>
             <img
-              src={assets.docHeader}
+              src={assets.docHeader2}
               className="rounded-3xl inset-0 w-2xl object-cover"
               alt="doctors"
               width={400}
