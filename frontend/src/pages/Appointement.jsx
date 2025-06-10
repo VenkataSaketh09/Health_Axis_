@@ -66,7 +66,7 @@ const Appointement = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     <span className="text-gray-600">
-                      {doctor.fullAddress || `${doctor.address.line1}, ${doctor.address.line2}`}
+                      {doctor.address}
                     </span>
                   </div>
                   
