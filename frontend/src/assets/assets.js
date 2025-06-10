@@ -351,6 +351,9 @@ import female from "./female.jpg"
 import HealthAxisLogo from "./health_axis_logo.svg"
 import HealthAxisLogo2 from "./health_axis_logo2.png"
 import HealthAxisFullLogo from "./health_axis_fullLogo.png"
+import BP from "./bp.jpg"
+import pulse from "./pulse.jpg"
+import sugar from "./sugar.jpg"
 export const assets = {
     appointment_img,
     header_img,
@@ -377,7 +380,10 @@ export const assets = {
     female,
     HealthAxisLogo,
     HealthAxisFullLogo,
-    HealthAxisLogo2
+    HealthAxisLogo2,
+    BP,
+    pulse,
+    sugar
 }
 
 export const specialityData = [

@@ -9,6 +9,9 @@ import MyAppointments from "./pages/MyAppointments"
 import Appointment from "./pages/Appointement"
 import NavBar from "./components/NavBar"
 import Footer from "./components/Footer"
+import BloodPressureMonitor from "./components/BPMonitor"
+import BloodSugarMonitor from "./components/SugarMonitor"
+import HeartRateMonitor from "./components/HeartRate"
 const App = () => {
   return (
     <div className="mx-4 sm:mx-[10%]">
@@ -23,6 +26,9 @@ const App = () => {
         <Route path="/my-profile" element={<Myprofile/>}></Route>
         <Route path="/my-appointments" element={<MyAppointments/>}></Route>
         <Route path="/appointment/:docId" element={<Appointment/>}></Route>
+        <Route path="/bp" element={<BloodPressureMonitor/>}></Route>
+        <Route path="/sugar" element={<BloodSugarMonitor/>}></Route>
+        <Route path="/pulse" element={<HeartRateMonitor/>}></Route>
       </Routes>
       <Footer/>
     </div>
