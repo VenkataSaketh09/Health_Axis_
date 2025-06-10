@@ -346,7 +346,11 @@ import docHeader from "./docHeader.jpg"
 import docHeader2 from "./docHeader2.jpg"
 import arrowIcon from "./arrow_icon.png"
 import appointmentShow from "./appointment_doc.png"
-
+import male from "./male.jpg"
+import female from "./female.jpg" 
+import HealthAxisLogo from "./health_axis_logo.svg"
+import HealthAxisLogo2 from "./health_axis_logo2.png"
+import HealthAxisFullLogo from "./health_axis_fullLogo.png"
 export const assets = {
     appointment_img,
     header_img,
@@ -369,6 +373,11 @@ export const assets = {
     docHeader2,
     arrowIcon,
     appointmentShow,
+    male,
+    female,
+    HealthAxisLogo,
+    HealthAxisFullLogo,
+    HealthAxisLogo2
 }
 
 export const specialityData = [

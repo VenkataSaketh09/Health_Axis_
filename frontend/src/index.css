@@ -12,7 +12,11 @@
 ::-webkit-scrollbar{
   @apply hidden
 }
-
+@media(max-width:740px){
+  .active p {
+    @apply text-white bg-blue-600
+  }
+}
 @layer base {
   :root {
     --background: 0 0% 100%;
