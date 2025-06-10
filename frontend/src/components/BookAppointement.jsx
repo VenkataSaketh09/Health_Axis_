@@ -8,7 +8,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-
+import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
@@ -39,6 +39,12 @@ const BookAppointement = () => {
     }
     setSlot(timeList);
   };
+  const formattedDate = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    weekday: "long",
+  }).format(date);
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -108,6 +114,18 @@ const BookAppointement = () => {
                     className="bg-blue-600 hover:bg-blue-900"
                     disabled={!(date && selectedTimeSlot)}
                     onClick={() => {
+                      toast.success("Appointment has been Booked", {
+                        description: `${formattedDate}, ${selectedTimeSlot}`,
+                        position: "top-right",
+                        style: {
+                          background: "#10b981", // Green background
+                          color: "white",
+                          border: "1px solid #059669",
+                          fontSize: "15px",
+                        },
+                        className: "toast-success",
+                        duration: 4000,
+                      });
                       console.log("Selected Date:", date);
                       console.log("Selected Slot:", selectedTimeSlot);
                       // Call your backend API or state update here
