@@ -14,6 +14,33 @@ export default upload
 
 
 
+
+// import multer from "multer";
+
+// // Configure disk storage
+// const storage = multer.diskStorage({
+//   destination: function (req, file, callback) {
+//     callback(null, 'uploads/'); // Folder where files will be stored
+//   },
+//   filename: function (req, file, callback) {
+//     callback(null, file.originalname); // or use Date.now() + file.originalname to avoid duplicates
+//   }
+// });
+
+// // Initialize multer with the storage config
+// const upload = multer({ storage });
+
+// export default upload;
+
+
+// In Node.js, callbacks follow a standard pattern:
+
+// callback(error, result);
+
+
+// diskStorage	Disk	❌ No	⚠️ Only if you delete later
+// dest: 'uploads/'	Disk	❌ No	⚠️ Same as above
+
 // multer.diskStorage() lets you store uploaded files directly on the disk (your server’s file system).
 
 // It takes an object with configuration options. Here, you're defining one of the options: filename.
