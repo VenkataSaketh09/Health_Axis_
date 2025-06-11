@@ -1,26 +1,32 @@
 import { useState } from "react";
 import { useContext } from "react";
 import { AdminContext } from "../context/AdminContext";
-import axios from "axios"
+import axios from "axios";
+import { toast } from "react-toastify";
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [state, setState] = useState("Admin");
 
-  const {setAToken,backend_url}=useContext(AdminContext)
+  const { setaToken, backend_url } = useContext(AdminContext);
 
-  const handleLogin = async(e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     // Handle login logic here
     // console.log(`${state} login attempt:`, { email, password });
-    if(state==="Admin"){
-      const {data}=await axios.post(backend_url+'/api/admin/login',{email,password})
-      if(data.success){
-        console.log(data.token)
+    if (state === "Admin") {
+      const { data } = await axios.post(backend_url + "/api/admin/login", {
+        email,
+        password,
+      });
+      if (data.success) {
+        // console.log(data.token)
+        localStorage.setItem("aToken", data.token);
+        setaToken(data.token);
+      } else {
+        toast.error(data.message);
       }
-    }
-    else{
-
+    } else {
     }
   };
 
@@ -39,10 +45,13 @@ const Login = () => {
           <span className="text-blue-500">{state}</span>{" "}
           <span className="text-gray-600">Login</span>
         </h1>
-        
+
         <form onSubmit={handleLogin} className="space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Email
             </label>
             <input
@@ -54,9 +63,12 @@ const Login = () => {
               required
             />
           </div>
-          
+
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Password
             </label>
             <input
@@ -68,7 +80,7 @@ const Login = () => {
               required
             />
           </div>
-          
+
           <button
             type="submit"
             className="w-full bg-blue-500 text-white py-3 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium transition-colors"
@@ -76,7 +88,7 @@ const Login = () => {
             Login
           </button>
         </form>
-        
+
         <div className="mt-6 text-center">
           <span className="text-gray-600 text-sm">
             {state === "Admin" ? "Doctor Login? " : "Admin Login? "}

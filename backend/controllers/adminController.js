@@ -33,15 +33,15 @@ const addDoctor = async (req, res) => {
       !fees ||
       !address
     ) {
-      res.status(400).json({ success: false, message: "Missing Details" });
+      res.json({ success: false, message: "Missing Details" });
     }
     //validating email format
     if (!validator.isEmail(email)) {
-      res.status(400).json({ success: false, message: "Missing Details" });
+      res.json({ success: false, message: "Missing Details" });
     }
     //validating strong password
     if (password.length < 8) {
-      res.status(400).json({ success: false, message: "Missing Details" });
+      res.json({ success: false, message: "Missing Details" });
     }
     //hashing the password
     const salt = await bcrypt.genSalt(10);
@@ -70,10 +70,9 @@ const addDoctor = async (req, res) => {
     const doctorUpload = new doctorModel(doctorData);
     await doctorUpload.save();
     return res
-      .status(200)
       .json({ success: true, message: "successfully uploaded data" });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message });
+    return res.json({ success: false, message: error.message });
   }
 };
 
@@ -82,10 +81,10 @@ const loginAdmin=async(req,res)=>{
     const {email,password}=req.body
   if(email===process.env.ADMIN_EMAIL && password===process.env.ADMIN_PASSWORD){
     const token=jwt.sign(email+password,process.env.JWT_SECRET)
-    return res.status(200).json({success:true,token})
+    return res.json({success:true,token})
   }
   else{
-    return res.status(400).json({success:false,message:"invalid credentials"})
+    return res.json({success:false,message:"invalid credentials"})
   }
   }
   catch(error){
