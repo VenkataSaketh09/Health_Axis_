@@ -1,6 +1,6 @@
 import multer from "multer";
 
-//You are creating a storage engine using multer.diskStorage.
+// //You are creating a storage engine using multer.diskStorage.
 
 const storage=multer.diskStorage({
     filename:function(req,file,callback){
@@ -11,6 +11,21 @@ const storage=multer.diskStorage({
 const upload=multer({storage})
 
 export default upload
+
+// import multer from "multer";
+
+// const storage = multer.diskStorage({
+//   destination: function (req, file, callback) {
+//     callback(null, "uploads/"); // or "public/uploads/" depending on your structure
+//   },
+//   filename: function (req, file, callback) {
+//     callback(null, Date.now() + "-" + file.originalname); // avoids filename conflicts
+//   },
+// });
+
+// const upload = multer({ storage });
+
+// export default upload;
 
 
 

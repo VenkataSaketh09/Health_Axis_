@@ -478,11 +478,7 @@ export const doctors = [
         experience: '2 Years',
         about: 'Dr. Davis has a strong commitment to delivering comprehensive medical care, focusing on preventive medicine, early diagnosis, and effective treatment strategies. Dr. Davis has a strong commitment to delivering comprehensive medical care, focusing on preventive medicine, early diagnosis, and effective treatment strategies.',
         fees: 40,
-        address: {
-            line1: '47th Cross, Richmond',
-            line2: 'Circle, Ring Road, London'
-        },
-        fullAddress: '47th Cross, Richmond, Circle, Ring Road, London',
+        address: '47th Cross, Richmond, Circle, Ring Road, London',
         socialMedia: {
             youtube: '#',
             linkedin: '#',
@@ -499,11 +495,7 @@ export const doctors = [
         experience: '4 Years',
         about: 'Dr. Davis has a strong commitment to delivering comprehensive medical care, focusing on preventive medicine, early diagnosis, and effective treatment strategies. Dr. Davis has a strong commitment to delivering comprehensive medical care, focusing on preventive medicine, early diagnosis, and effective treatment strategies.',
         fees: 50,
-        address: {
-            line1: '57th Cross, Richmond',
-            line2: 'Circle, Ring Road, London'
-        },
-        fullAddress: '57th Cross, Richmond, Circle, Ring Road, London',
+        address: '57th Cross, Richmond, Circle, Ring Road, London',
         socialMedia: {
             youtube: '#',
             linkedin: '#',
@@ -520,11 +512,7 @@ export const doctors = [
         experience: '4 Years',
         about: 'Dr. Davis has a strong commitment to delivering comprehensive medical care, focusing on preventive medicine, early diagnosis, and effective treatment strategies. Dr. Davis has a strong commitment to delivering comprehensive medical care, focusing on preventive medicine, early diagnosis, and effective treatment strategies.',
         fees: 50,
-        address: {
-            line1: '57th Cross, Richmond',
-            line2: 'Circle, Ring Road, London'
-        },
-        fullAddress: '57th Cross, Richmond, Circle, Ring Road, London',
+        address: '57th Cross, Richmond, Circle, Ring Road, London',
         socialMedia: {
             youtube: '#',
             linkedin: '#',
@@ -541,11 +529,7 @@ export const doctors = [
         experience: '4 Years',
         about: 'Dr. Davis has a strong commitment to delivering comprehensive medical care, focusing on preventive medicine, early diagnosis, and effective treatment strategies. Dr. Davis has a strong commitment to delivering comprehensive medical care, focusing on preventive medicine, early diagnosis, and effective treatment strategies.',
         fees: 50,
-        address: {
-            line1: '17th Cross, Richmond',
-            line2: 'Circle, Ring Road, London'
-        },
-        fullAddress: '17th Cross, Richmond, Circle, Ring Road, London',
+        address: '17th Cross, Richmond, Circle, Ring Road, London',
         socialMedia: {
             youtube: '#',
             linkedin: '#',
@@ -562,11 +546,7 @@ export const doctors = [
         experience: '3 Years',
         about: 'Dr. Davis has a strong commitment to delivering comprehensive medical care, focusing on preventive medicine, early diagnosis, and effective treatment strategies. Dr. Davis has a strong commitment to delivering comprehensive medical care, focusing on preventive medicine, early diagnosis, and effective treatment strategies.',
         fees: 60,
-        address: {
-            line1: '27th Cross, Richmond',
-            line2: 'Circle, Ring Road, London'
-        },
-        fullAddress: '27th Cross, Richmond, Circle, Ring Road, London',
+        address: '27th Cross, Richmond, Circle, Ring Road, London',
         socialMedia: {
             youtube: '#',
             linkedin: '#',
@@ -583,11 +563,7 @@ export const doctors = [
         experience: '1 Years',
         about: 'Dr. Davis has a strong commitment to delivering comprehensive medical care, focusing on preventive medicine, early diagnosis, and effective treatment strategies. Dr. Davis has a strong commitment to delivering comprehensive medical care, focusing on preventive medicine, early diagnosis, and effective treatment strategies.',
         fees: 30,
-        address: {
-            line1: '37th Cross, Richmond',
-            line2: 'Circle, Ring Road, London'
-        },
-        fullAddress: '37th Cross, Richmond, Circle, Ring Road, London',
+        address: '37th Cross, Richmond, Circle, Ring Road, London',
         socialMedia: {
             youtube: '#',
             linkedin: '#',
@@ -604,11 +580,7 @@ export const doctors = [
         experience: '2 Years',
         about: 'Dr. Davis has a strong commitment to delivering comprehensive medical care, focusing on preventive medicine, early diagnosis, and effective treatment strategies. Dr. Davis has a strong commitment to delivering comprehensive medical care, focusing on preventive medicine, early diagnosis, and effective treatment strategies.',
         fees: 40,
-        address: {
-            line1: '47th Cross, Richmond',
-            line2: 'Circle, Ring Road, London'
-        },
-        fullAddress: '47th Cross, Richmond, Circle, Ring Road, London',
+        address: '47th Cross, Richmond, Circle, Ring Road, London',
         socialMedia: {
             youtube: '#',
             linkedin: '#',

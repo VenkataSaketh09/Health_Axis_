@@ -1,14 +1,17 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useContext } from "react";
 import { assets } from "../../assets/assets";
+import { AdminContext } from "../../context/AdminContext";
+import { toast } from "react-toastify";
+import axios from "axios";
 const AddDoctor = () => {
+  const { backend_url, aToken } = useContext(AdminContext);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     speciality: "General physician",
     degree: "",
-    address1: "",
-    address2: "",
+    address: "",
     experience: "1 Year",
     fees: "",
     about: "",
@@ -21,7 +24,8 @@ const AddDoctor = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: value, //javascript object litral syntax to update the state
+      // [name]: value, is a dynamic way to set the property name based on the input field's name attribute.
     }));
   };
 
@@ -33,46 +37,67 @@ const AddDoctor = () => {
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setDoctorImage(e.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
+    setDoctorImage(file)
+  //   if (file) {
+  //   setDoctorImage(file); // ✅ file object, not URL
+  // }
+    // if (file) {
+    //   const reader = new FileReader();
+    //   reader.onload = (e) => {
+    //     setDoctorImage(e.target.result);
+    //   };
+    //   reader.readAsDataURL(file);
+    // }
   };
 
-//    const reader = new FileReader();
-// Creates a new FileReader object.
-
-// FileReader is a built-in browser API that can read files (like images, text, PDFs) from the user's device.
-
-//   reader.onload = (e) => {
-//     setDoctorImage(e.target.result);
-//   };
-// Defines what should happen after the file is fully read.
-
-// reader.onload is an event handler that runs when reading is done.
-
-// e.target.result contains the base64-encoded content of the image — suitable to use in an img tag.
-
-// setDoctorImage(...) is probably a React state updater (like useState). You're saving the image data so you can use it somewhere, like showing a preview.
-
-//   reader.readAsDataURL(file);
-// Actually starts reading the file, and tells FileReader to read it as a Data URL.
-
-// A Data URL is a string that looks like this:
-
-// data:image/png;base64,iVBORw0KGgoAAAANSUhEUg...
-// This format is ideal for showing the image right away in an <img src="..." />.
-
-
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("Form Data:", formData);
     console.log("Doctor Image:", doctorImage);
     // Handle form submission here
+    try {
+      const form = new FormData();
+      form.append("name", formData.name);
+      form.append("email", formData.email);
+      form.append("password", formData.password);
+      form.append("speciality", formData.speciality);
+      form.append("degree", formData.degree);
+      form.append("address", formData.address);
+      form.append("experience", formData.experience);
+      form.append("fees", formData.fees);
+      form.append("about", formData.about);
+      form.append("image", doctorImage); // assuming it's a file/blob
+
+      const response=await axios.post(`${backend_url}/api/admin/add-doctor`, form, {
+        headers: {aToken}
+      });
+      if(!doctorImage){
+        return toast.error("Please upload a doctor image");
+      }
+      if (response.data.success) {
+        toast.success("Doctor Added Successfully");
+        // Reset form after success
+        setFormData({
+          name: "",
+          email: "",
+          password: "",
+          speciality: "General physician",
+          degree: "",
+          address: "",
+          experience: "1 Year",
+          fees: "",
+          about: "",
+        });
+        setDoctorImage(false);
+        fileInputRef.current.value = "";
+      } else {
+        console.log(response.data.message);
+        toast.error(response.data.message || "Something went wrong");
+      }
+    } catch (error) {
+      console.error("API Error:", error);
+      toast.error("Server Error. Check backend logs.");
+    }
   };
 
   const specialities = [
@@ -94,7 +119,7 @@ const AddDoctor = () => {
   ];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 w-full" >
+    <form onSubmit={handleSubmit} className="space-y-8 w-full">
       <div className="max-w-8xl mx-auto p-6 bg-white">
         <h1 className="text-2xl font-semibold text-gray-800 mb-8">
           Add Doctor
@@ -108,7 +133,7 @@ const AddDoctor = () => {
             >
               {doctorImage ? (
                 <img
-                  src={doctorImage}
+                  src={URL.createObjectURL(doctorImage)}
                   alt="Doctor"
                   className="w-full h-full object-cover rounded-full"
                 />
@@ -246,9 +271,9 @@ const AddDoctor = () => {
               </label>
               <textarea
                 rows={3}
-                id="address1"
-                name="address1"
-                value={formData.address1}
+                id="address"
+                name="address"
+                value={formData.address}
                 onChange={handleInputChange}
                 placeholder="Address"
                 required
@@ -337,3 +362,27 @@ const AddDoctor = () => {
 };
 
 export default AddDoctor;
+
+//    const reader = new FileReader();
+// Creates a new FileReader object.
+
+// FileReader is a built-in browser API that can read files (like images, text, PDFs) from the user's device.
+
+//   reader.onload = (e) => {
+//     setDoctorImage(e.target.result);
+//   };
+// Defines what should happen after the file is fully read.
+
+// reader.onload is an event handler that runs when reading is done.
+
+// e.target.result contains the base64-encoded content of the image — suitable to use in an img tag.
+
+// setDoctorImage(...) is probably a React state updater (like useState). You're saving the image data so you can use it somewhere, like showing a preview.
+
+//   reader.readAsDataURL(file);
+// Actually starts reading the file, and tells FileReader to read it as a Data URL.
+
+// A Data URL is a string that looks like this:
+
+// data:image/png;base64,iVBORw0KGgoAAAANSUhEUg...
+// This format is ideal for showing the image right away in an <img src="..." />.

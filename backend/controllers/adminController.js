@@ -14,11 +14,11 @@ const addDoctor = async (req, res) => {
       degree,
       experience,
       about,
-      available,
       fees,
       address,
     } = req.body;
     const imageFile = req.file;
+    console.log(imageFile);
     // console.log({name,email,password,speciality,degree,experience,about,available,fees,address},imageFile)
     //checking for all data to add doctor
     if (
@@ -29,19 +29,18 @@ const addDoctor = async (req, res) => {
       !degree ||
       !experience ||
       !about ||
-      !available ||
       !fees ||
       !address
     ) {
-      res.json({ success: false, message: "Missing Details" });
+      return res.json({ success: false, message: "Missing Details" });
     }
     //validating email format
     if (!validator.isEmail(email)) {
-      res.json({ success: false, message: "Missing Details" });
+      return res.json({ success: false, message: "Missing Details" });
     }
     //validating strong password
     if (password.length < 8) {
-      res.json({ success: false, message: "Missing Details" });
+      return res.json({ success: false, message: "Missing Details" });
     }
     //hashing the password
     const salt = await bcrypt.genSalt(10);
@@ -62,7 +61,7 @@ const addDoctor = async (req, res) => {
       degree,
       experience,
       about,
-      available,
+      available:true,
       fees,
       address,
       date: Date.now(),
@@ -72,7 +71,7 @@ const addDoctor = async (req, res) => {
     return res
       .json({ success: true, message: "successfully uploaded data" });
   } catch (error) {
-    return res.json({ success: false, message: error.message });
+    return  res.json({ success: false, message: error.message });
   }
 };
 
@@ -81,14 +80,14 @@ const loginAdmin=async(req,res)=>{
     const {email,password}=req.body
   if(email===process.env.ADMIN_EMAIL && password===process.env.ADMIN_PASSWORD){
     const token=jwt.sign(email+password,process.env.JWT_SECRET)
-    return res.json({success:true,token})
+    return  res.json({success:true,token})
   }
   else{
-    return res.json({success:false,message:"invalid credentials"})
+    return  res.json({success:false,message:"invalid credentials"})
   }
   }
   catch(error){
-    return res.json({success:false,message:error.message})
+    return  res.json({success:false,message:error.message})
   }
 }
 
