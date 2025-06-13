@@ -4,6 +4,7 @@ import cors from  'cors'
 import connectDB from "./configs/mongodb.js"
 import connectCloudinary from "./configs/cloudinary.js"
 import adminRouter from "./routes/adminRoute.js"
+import doctorRouter from "./routes/doctorRoute.js"
 //app config
 const app=express()
 const port=process.env.PORT || 5000
@@ -17,6 +18,7 @@ app.use(cors())
 //api endpoints
 
 app.use('/api/admin',adminRouter)
+app.use('/api/doctor',doctorRouter)
 //localhost:5000/api/admin/add-doctor
 
 app.get('/',(req,res)=>{

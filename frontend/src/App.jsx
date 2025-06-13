@@ -12,10 +12,12 @@ import Footer from "./components/Footer"
 import BloodPressureMonitor from "./components/BPMonitor"
 import BloodSugarMonitor from "./components/SugarMonitor"
 import HeartRateMonitor from "./components/HeartRate"
+import { ToastContainer, toast } from 'react-toastify';
 const App = () => {
   return (
     <div className="mx-4 sm:mx-[10%]">
       <NavBar/>
+      <ToastContainer/>
       <Routes>
         <Route path="/" element={<Home/>}></Route>
         <Route path="/doctors" element={<Doctors/>}></Route>
