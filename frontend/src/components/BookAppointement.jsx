@@ -8,25 +8,39 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { CalendarDays, Clock } from "lucide-react";
+import { AppContext } from "@/context/AppContext";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
-const BookAppointement = () => {
+const BookAppointement = ({ doctor }) => {
+  const navigate = useNavigate();
   const [date, setDate] = useState(new Date());
   const [slot, setSlot] = useState([]);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { backend_url, token, getDoctorsData, userData } = useContext(AppContext);
+
   const isPastDay = (day) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     day.setHours(0, 0, 0, 0);
     return day < today;
   };
+
   useEffect(() => {
     getTime();
-  }, []);
+    if (doctor && date) {
+      getBookedSlots();
+    }
+  }, [doctor, date]);
+
   const getTime = () => {
     const timeList = [];
     for (let i = 10; i <= 12; i++) {
@@ -39,11 +53,94 @@ const BookAppointement = () => {
     }
     setSlot(timeList);
   };
+
+  const getBookedSlots = () => {
+    if (!doctor || !date) return;
+    
+    // Format date to match your API format (assuming YYYY-MM-DD or similar)
+    const formattedDate = date.toISOString().split('T')[0];
+    
+    // Get booked slots for the selected date from doctor's slots_booked
+    const slotsForDate = doctor.slots_booked?.[formattedDate] || [];
+    setBookedSlots(slotsForDate);
+  };
+
+  const formatDateForAPI = (date) => {
+    // Format date as needed by your API (adjust format as required)
+    return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
+  };
+
   const formattedDate = new Intl.DateTimeFormat("en-US", {
     month: "long",
     day: "numeric",
     weekday: "long",
   }).format(date);
+
+  const bookAppointment = async () => {
+    if (!token) {
+      toast.warn("Please login to book an appointment");
+      return navigate("/login");
+    }
+
+    if (!date || !selectedTimeSlot) {
+      toast.error("Please select both date and time slot");
+      return;
+    }
+
+    // Get userId from userData
+    const currentUserId = userData?._id || userData?.id;
+    
+    if (!doctor || !currentUserId) {
+      toast.error("Missing required information. Please ensure you are logged in.");
+      console.log("Debug - doctor:", doctor);
+      console.log("Debug - userData:", userData);
+      console.log("Debug - currentUserId:", currentUserId);
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const slotDate = formatDateForAPI(date);
+      const slotTime = selectedTimeSlot;
+
+      const requestData = {
+        userId: currentUserId,
+        doctorId: doctor._id,
+        slotDate: slotDate,
+        slotTime: slotTime
+      };
+
+      const { data } = await axios.post(
+        backend_url + "/api/user/book-appointment", 
+        requestData,
+        { headers: { token } }
+      );
+
+      if (data.success) {
+        toast.success("Appointment booked successfully Booked for " + formattedDate + " at " + slotTime);
+        // Reset form
+        setSelectedTimeSlot("");
+        setDate(new Date());
+        // Refresh doctor data to update booked slots
+        if (getDoctorsData) {
+          await getDoctorsData();
+        }
+        navigate('/my-appointments');
+      } else {
+        toast.error(data.message || "Failed to book appointment");
+      }
+    } catch (error) {
+      console.error("Error booking appointment:", error);
+      toast.error("Error booking appointment: " + (error.response?.data?.message || error.message));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const isSlotBooked = (timeSlot) => {
+    return bookedSlots.includes(timeSlot);
+  };
 
   return (
     <Dialog>
@@ -59,8 +156,8 @@ const BookAppointement = () => {
           <DialogDescription>
             <div>
               <div className="grid grid-cols-1 md:grid-cols-2 mt-5">
-                {/* calender */}
-                <div className="flex flex-col gap-3  items-baseline">
+                {/* Calendar */}
+                <div className="flex flex-col gap-3 items-baseline">
                   <h2 className="flex gap-2 items-center">
                     <CalendarDays className="text-blue-600 h-5 w-5" />
                     Select Date
@@ -68,37 +165,48 @@ const BookAppointement = () => {
                   <Calendar
                     mode="single"
                     selected={date}
-                    onSelect={(selectedDate) =>
-                      selectedDate && setDate(selectedDate)
-                    }
+                    onSelect={(selectedDate) => {
+                      if (selectedDate) {
+                        setDate(selectedDate);
+                        setSelectedTimeSlot(""); // Reset selected time when date changes
+                      }
+                    }}
                     disabled={isPastDay}
                     className="rounded-lg border text-gray-900"
                   />
                 </div>
-                {/* slot*/}
+
+                {/* Time Slots */}
                 <div className="mt-3 md:mt-0">
                   <h2 className="flex gap-2 items-center mb-3">
                     <Clock className="text-blue-600 h-5 w-5" />
                     Select Time Slot
                   </h2>
-                  <div className="grid grid-cols-3 gap-2 border rounded-lg p-4">
-                    {slot?.map((value, index) => (
-                      <h2
-                        key={index}
-                        onClick={() => setSelectedTimeSlot(value.time)}
-                        className={`p-2 border rounded-full text-center cursor-pointer hover:bg-blue-600 hover:text-white ${
-                          value.time === selectedTimeSlot
-                            ? "bg-blue-600 text-white"
-                            : "text-gray-900"
-                        }`}
-                      >
-                        {value.time}
-                      </h2>
-                    ))}
+                  <div className="grid grid-cols-3 gap-2 border rounded-lg p-4 max-h-60 overflow-y-auto">
+                    {slot?.map((value, index) => {
+                      const isBooked = isSlotBooked(value.time);
+                      return (
+                        <h2
+                          key={index}
+                          onClick={() => !isBooked && setSelectedTimeSlot(value.time)}
+                          className={`p-2 border rounded-full text-center text-xs cursor-pointer transition-colors ${
+                            isBooked
+                              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                              : value.time === selectedTimeSlot
+                              ? "bg-blue-600 text-white"
+                              : "text-gray-900 hover:bg-blue-600 hover:text-white"
+                          }`}
+                        >
+                          {value.time}
+                          {isBooked && <div className="text-xs text-red-500">Booked</div>}
+                        </h2>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
             </div>
+
             <DialogFooter className="sm:justify-end mt-4">
               <DialogClose asChild>
                 <div className="flex gap-2">
@@ -112,26 +220,10 @@ const BookAppointement = () => {
                   <Button
                     type="button"
                     className="bg-blue-600 hover:bg-blue-900"
-                    disabled={!(date && selectedTimeSlot)}
-                    onClick={() => {
-                      toast.success("Appointment has been Booked", {
-                        description: `${formattedDate}, ${selectedTimeSlot}`,
-                        position: "top-right",
-                        style: {
-                          background: "#10b981", // Green background
-                          color: "white",
-                          border: "1px solid #059669",
-                          fontSize: "15px",
-                        },
-                        className: "toast-success",
-                        duration: 4000,
-                      });
-                      console.log("Selected Date:", date);
-                      console.log("Selected Slot:", selectedTimeSlot);
-                      // Call your backend API or state update here
-                    }}
+                    disabled={!(date && selectedTimeSlot) || isLoading}
+                    onClick={bookAppointment}
                   >
-                    Submit
+                    {isLoading ? "Booking..." : "Book Appointment"}
                   </Button>
                 </div>
               </DialogClose>

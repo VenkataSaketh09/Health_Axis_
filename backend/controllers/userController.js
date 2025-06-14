@@ -2,7 +2,9 @@ import validator from "validator";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import userModel from "../models/userModel.js";
-import {v2 as cloudinary} from "cloudinary";
+import { v2 as cloudinary } from "cloudinary";
+import doctorModel from "../models/doctorModel.js";
+import appointmentModel from "../models/appointmentModel.js";
 //API to register user
 const registerUser = async (req, res) => {
   try {
@@ -221,7 +223,7 @@ const getUserProfile = async (req, res) => {
       return res.json({ success: false, message: "User ID is required" });
     }
     const userData = await userModel.findById(userId).select("-password");
-    res.json({ success: true, user:userData });
+    res.json({ success: true, user: userData });
   } catch (error) {
     console.log(error);
     res.json({ success: false, message: error.message });
@@ -425,9 +427,11 @@ const updateUserProfile = async (req, res) => {
       new: true,
       runValidators: true,
     });
-    if(image){
-      const imageUpload=await cloudinary.uploader.upload(image.path,{resource_type:"image"});
-      const image_url=imageUpload.secure_url;
+    if (image) {
+      const imageUpload = await cloudinary.uploader.upload(image.path, {
+        resource_type: "image",
+      });
+      const image_url = imageUpload.secure_url;
       updatedUser.image = image_url;
     }
 
@@ -469,4 +473,74 @@ const updateUserProfile = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
-export { registerUser, loginUser, getUserProfile, updateUserProfile };
+
+//API to book appointment
+const bookAppointment = async (req, res) => {
+  try {
+    const { userId, doctorId, slotDate, slotTime } = req.body;
+    const doctorData = await doctorModel.findById(doctorId).select("-password");
+    if (!doctorData) {
+      return res.json({ success: false, message: "Doctor not found" });
+    }
+    let slots_booked = doctorData.slots_booked;
+    if (slots_booked[slotDate]) {
+      if (slots_booked[slotDate].includes(slotTime)) {
+        return res.json({ success: false, message: "Slot already booked" });
+      } else {
+        slots_booked[slotDate].push(slotTime);
+      }
+    } else {
+      slots_booked[slotDate] = [];
+      slots_booked[slotDate].push(slotTime);
+    }
+    const userData = await userModel.findById(userId).select("-password");
+    delete doctorData.slots_booked;
+    const appointmentData = {
+      userId,
+      doctorId,
+      userData,
+      doctorData,
+      amount: doctorData.fees,
+      slotDate,
+      slotTime,
+      date: Date.now(),
+    };
+    const newAppointment = new appointmentModel(appointmentData);
+    await newAppointment.save();
+
+    //save updated slots_booked in doctor model
+    await doctorModel.findByIdAndUpdate(doctorId, { slots_booked });
+    res.json({ success: true, message: "Appointment booked successfully" });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+const listAppointment = async (req, res) => {
+  try {
+    const userId  = req.userId;
+    if (!userId) {
+      return res.json({ success: false, message: "User ID is required" });
+    }
+    const appointments = await appointmentModel
+      .find({ userId })
+      .populate("doctorId", "-password")
+      .sort({ date: -1 });
+    if (!appointments || appointments.length === 0) {
+      return res.json({ success: false, message: "No appointments found" });
+    }
+    res.json({ success: true, appointments });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+export {
+  registerUser,
+  loginUser,
+  getUserProfile,
+  updateUserProfile,
+  bookAppointment,
+  listAppointment,
+};

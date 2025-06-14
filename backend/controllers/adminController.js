@@ -75,6 +75,8 @@ const addDoctor = async (req, res) => {
   }
 };
 
+
+
 const loginAdmin=async(req,res)=>{
   try{
     const {email,password}=req.body
