@@ -34,7 +34,7 @@ const Myprofile = () => {
   const navigate = useNavigate();
   const { userData, setUserData, token, loadUserprofileData, backend_url } =
     useContext(AppContext);
-  const [image, setImage] = useState(false);
+  // const [image, setImage] = useState(null);
 
   // Add loading state and provide default values
   if (!userData) {
@@ -55,38 +55,56 @@ const Myprofile = () => {
     }));
   };
 
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    const dd = String(date.getDate()).padStart(2, "0");
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const yyyy = date.getFullYear();
+    return `${dd}-${mm}-${yyyy}`;
+  };
+
   const handleSave = async () => {
     try {
-      // Create FormData for file upload if image exists
       const formData = new FormData();
 
-      // Add all user data to FormData
+      // Add all user data to FormData (excluding image first)
       Object.keys(userData).forEach((key) => {
         if (userData[key] !== null && userData[key] !== undefined) {
-          formData.append(key, userData[key]);
+          let valueToSend = userData[key];
+
+          // Convert dateOfBirth to YYYY-MM-DD format only
+          if (key === "dateOfBirth") {
+            valueToSend = new Date(userData[key]).toISOString().split("T")[0];
+          }
+
+          formData.append(key, valueToSend);
+          console.log(`Adding ${key}:`, valueToSend);
         }
       });
 
-      // Add image file if it exists
-      if (image) {
-        formData.append("image", image);
-      }
+      // Add image file separately if it exists and is a File object
+      // if (image && image instanceof File) {
+      //   console.log("Adding image file:", image.name, image.type, image.size);
+      //   formData.append("image", image, image.name);
+      // } else if (image) {
+      //   console.warn("Image is not a File object:", typeof image, image);
+      // }
 
       const response = await axios.post(
         `${backend_url}/api/user/update-profile`,
         formData,
         {
           headers: {
-            token
+            token,
           },
         }
       );
 
       if (response.data.success) {
         toast.success("Profile updated successfully");
-        await loadUserprofileData(); // Reload profile data
+        await loadUserprofileData();
         setIsEditing(false);
-        setImage(false);
+        // setImage(false);
         setOriginalData(null);
       } else {
         toast.error(response.data.message || "Failed to update profile");
@@ -106,7 +124,7 @@ const Myprofile = () => {
       setUserData(originalData);
     }
     setIsEditing(false);
-    setImage(false);
+    // setImage(false);
     setOriginalData(null);
   };
 
@@ -158,26 +176,13 @@ const Myprofile = () => {
     navigate(`/${route}`);
   };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Validate file type
-      const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
-      if (!validTypes.includes(file.type)) {
-        toast.error("Please select a valid image file (JPEG, PNG, or GIF)");
-        return;
-      }
-
-      // Validate file size (e.g., max 5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-      if (file.size > maxSize) {
-        toast.error("Image size should be less than 5MB");
-        return;
-      }
-
-      setImage(file);
-    }
-  };
+  // const handleImageUpload = (e) => {
+  //   const file = e.target.files[0];
+  //   if (file) {
+  //     console.log("Selected file:", file.name, file.type, file.size);
+  //     setImage(file); // This should be a File object
+  //   }
+  // };
 
   const healthCards = [
     {
@@ -212,63 +217,12 @@ const Myprofile = () => {
                   <div className="relative">
                     <div className="relative">
                       <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                        {isEditing ? (
-                          <>
-                            <img
-                              src={
-                                image
-                                  ? URL.createObjectURL(image)
-                                  : userData.image || assets.male
-                              }
-                              alt="Profile"
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.target.style.display = "none";
-                                e.target.nextSibling.style.display = "flex";
-                              }}
-                            />
-                            <User
-                              className="w-8 h-8 text-gray-400"
-                              style={{ display: "none" }}
-                            />
-                          </>
-                        ) : (
-                          <>
-                            <img
-                              src={userData.image || assets.male}
-                              alt="Profile"
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.target.style.display = "none";
-                                e.target.nextSibling.style.display = "flex";
-                              }}
-                            />
-                            <User
-                              className="w-8 h-8 text-gray-400"
-                              style={{ display: "none" }}
-                            />
-                          </>
-                        )}
+                        <img
+                          src={userData.image}
+                          alt="Profile"
+                          className="w-full h-full object-cover"
+                        />
                       </div>
-
-                      {/* File input for image upload - only visible when editing */}
-                      {isEditing && (
-                        <>
-                          <input
-                            type="file"
-                            id="profileImageInput"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                            className="hidden"
-                          />
-                          <label
-                            htmlFor="profileImageInput"
-                            className="absolute -bottom-2 -right-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-2 cursor-pointer shadow-lg transition-colors duration-200"
-                          >
-                            <Edit className="w-3 h-3" />
-                          </label>
-                        </>
-                      )}
                     </div>
                   </div>
                   <div>
@@ -377,20 +331,27 @@ const Myprofile = () => {
                           <Input
                             id="dateOfBirth"
                             type="date"
-                            value={userData.dateOfBirth || ""}
+                            value={
+                              userData.dateOfBirth
+                                ? new Date(userData.dateOfBirth)
+                                    .toISOString()
+                                    .split("T")[0]
+                                : ""
+                            }
                             onChange={(e) =>
                               handleInputChange("dateOfBirth", e.target.value)
                             }
                           />
                         ) : (
                           <p className="px-3 py-2 bg-gray-50 rounded-md">
-                            {userData.dateOfBirth
-                              ? `${new Date(
-                                  userData.dateOfBirth
-                                ).toLocaleDateString()} (${calculateAge(
-                                  userData.dateOfBirth
-                                )} years)`
-                              : "Not provided"}
+                            {userData.dateOfBirth ? (
+                              <>
+                                {formatDate(userData.dateOfBirth)} (
+                                {calculateAge(userData.dateOfBirth)} years)
+                              </>
+                            ) : (
+                              "Not provided"
+                            )}
                           </p>
                         )}
                       </div>
