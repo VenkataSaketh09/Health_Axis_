@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, use } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +18,7 @@ import { AppContext } from "../context/AppContext"; // Adjust import path as nee
 import axios from "axios";
 
 const MyAppointments = () => {
-  const { token, backend_url } = useContext(AppContext);
+  const { token, backend_url, userData,getDoctorsData} = useContext(AppContext);
   const [activeTab, setActiveTab] = useState("upcoming");
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,8 +34,9 @@ const MyAppointments = () => {
       }
 
       setLoading(true);
-      const { data } = await axios.get(
-        `${backend_url}/api/user/appointments`,{headers: { token }})
+      const { data } = await axios.get(`${backend_url}/api/user/appointments`, {
+        headers: { token },
+      });
 
       if (data.success) {
         console.log(data.appointments);
@@ -68,21 +69,21 @@ const MyAppointments = () => {
 
     try {
       const now = new Date();
-      
+
       // Handle date format: "2025-06-14" (YYYY-MM-DD)
       const dateParts = appointmentDate.split("-");
       if (dateParts.length !== 3) return false;
-      
+
       const [year, month, day] = dateParts;
-      
+
       const timeParts = appointmentTime.split(" ");
       if (timeParts.length !== 2) return false;
-      
+
       const [time, period] = timeParts;
-      
+
       const hourMinuteParts = time.split(":");
       if (hourMinuteParts.length !== 2) return false;
-      
+
       const [hours, minutes] = hourMinuteParts;
 
       let hour24 = parseInt(hours);
@@ -108,18 +109,18 @@ const MyAppointments = () => {
   // Format date from API response - now handles slotDate format
   const formatDate = (dateString) => {
     if (!dateString) return "Date not available";
-    
+
     try {
       // Handle YYYY-MM-DD format (slotDate)
       if (dateString.includes("-") && dateString.length === 10) {
         const [year, month, day] = dateString.split("-");
         return `${day}-${month}-${year.slice(-2)}`;
       }
-      
+
       // Handle timestamp format (date field)
       const date = new Date(parseInt(dateString));
       if (isNaN(date.getTime())) return "Invalid date";
-      
+
       const day = date.getDate().toString().padStart(2, "0");
       const month = (date.getMonth() + 1).toString().padStart(2, "0");
       const year = date.getFullYear().toString().slice(-2);
@@ -131,41 +132,43 @@ const MyAppointments = () => {
   };
 
   // Filter appointments based on active tab
-  const filteredAppointments = appointments?.filter((appointment) => {
-    if (!appointment) return false;
-    
-    // Use slotDate and slotTime from your data structure
-    const appointmentDate = appointment.slotDate;
-    const appointmentTime = appointment.slotTime;
-    
-    console.log("Filtering appointment:", {
-      slotDate: appointmentDate,
-      slotTime: appointmentTime,
-      isUpcoming: isUpcoming(appointmentDate, appointmentTime)
-    });
-    
-    const isUpcomingAppt = isUpcoming(appointmentDate, appointmentTime);
-    return activeTab === "upcoming" ? isUpcomingAppt : !isUpcomingAppt;
-  }) || [];
+  const filteredAppointments =
+    appointments?.filter((appointment) => {
+      if (!appointment) return false;
+
+      // Use slotDate and slotTime from your data structure
+      const appointmentDate = appointment.slotDate;
+      const appointmentTime = appointment.slotTime;
+
+      console.log("Filtering appointment:", {
+        slotDate: appointmentDate,
+        slotTime: appointmentTime,
+        cancelled: appointment.cancelled,
+        isUpcoming: isUpcoming(appointmentDate, appointmentTime),
+      });
+
+      // If appointment is cancelled, it should always go to "past" tab
+      if (appointment.cancelled) {
+        return activeTab === "expired";
+      }
+
+      // For non-cancelled appointments, check if they're upcoming or past
+      const isUpcomingAppt = isUpcoming(appointmentDate, appointmentTime);
+      return activeTab === "upcoming" ? isUpcomingAppt : !isUpcomingAppt;
+    }) || [];
 
   // Uncomment and fix this function when you need it
-  const handleCancelAppointment = async (
-    appointmentId,
-    doctorName,
-    appointmentDate,
-    appointmentTime
-  ) => {
+  const handleCancelAppointment = async (appointmentId) => {
     try {
       // Add your cancel endpoint here
       const { data } = await axios.post(
         `${backend_url}/api/user/cancel-appointment`,
-        { appointmentId },
+        { appointmentId, userId: userData?._id },
         { headers: { token } }
       );
 
       if (data.success) {
         toast.success("Appointment Cancelled Successfully", {
-          description: `${doctorName} - ${appointmentDate}, ${appointmentTime}`,
           position: "top-right",
           style: {
             background: "#10b981",
@@ -179,6 +182,10 @@ const MyAppointments = () => {
 
         // Refresh appointments after cancellation
         fetchAppointments();
+        getDoctorsData(); // Refresh doctors data
+        
+        // Automatically switch to past tab to show the cancelled appointment
+        setActiveTab("expired");
       } else {
         toast.error("Failed to cancel appointment", {
           position: "top-right",
@@ -194,7 +201,7 @@ const MyAppointments = () => {
 
   const AppointmentCard = ({ appointment, showCancelButton = false }) => {
     if (!appointment) return null;
-    
+
     // Use doctorData instead of doctorId based on your data structure
     const doctorData = appointment.doctorData;
     const formattedDate = formatDate(appointment.slotDate);
@@ -236,44 +243,53 @@ const MyAppointments = () => {
               </div>
             </div>
           </div>
-          {showCancelButton && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="border-red-500 text-red-500 hover:bg-red-50 px-6"
-                >
-                  Cancel Appointment
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Cancel Appointment</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to cancel your appointment with{" "}
-                    {doctorData?.name} scheduled for {formattedDate} at{" "}
-                    {appointment.slotTime}? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Keep Appointment</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() =>
-                      handleCancelAppointment(
-                        appointment._id,
-                        doctorData?.name,
-                        formattedDate,
-                        appointment.slotTime
-                      )
-                    }
-                    className="bg-red-600 hover:bg-red-700"
+          <div className="flex flex-col space-y-10 mt-5 pb-5">
+            {!appointment.cancelled && (
+              <Button
+                variant="outline"
+                className="border-blue-500 text-blue-500 hover:bg-blue-100 px-6"
+                onClick={() => handlePayOnline(appointment)}
+              >
+                Pay Online
+              </Button>
+            )}
+            {showCancelButton && !appointment.cancelled && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="border-red-500 text-red-500 hover:bg-red-100 px-6"
                   >
                     Cancel Appointment
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel Appointment</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to cancel your appointment with{" "}
+                      {doctorData?.name} scheduled for {formattedDate} at{" "}
+                      {appointment.slotTime}? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep Appointment</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => handleCancelAppointment(appointment._id)}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Cancel Appointment
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            {appointment.cancelled && (
+              <div className="text-red-600 text-md p-10 font-semibold">
+                Appointment Cancelled
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
