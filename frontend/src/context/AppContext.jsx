@@ -3,7 +3,6 @@ import { doctors } from "../assets/assets";
 import axios from "axios";
 import App from "../App";
 import { toast } from "react-toastify";
-import { se } from "date-fns/locale";
 export const AppContext = createContext();
 
 const AppContextProvider = ({ children }) => {

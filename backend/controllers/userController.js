@@ -5,6 +5,7 @@ import userModel from "../models/userModel.js";
 import { v2 as cloudinary } from "cloudinary";
 import doctorModel from "../models/doctorModel.js";
 import appointmentModel from "../models/appointmentModel.js";
+import bpReadingModel from "../models/BPModel.js";
 //API to register user
 const registerUser = async (req, res) => {
   try {
@@ -564,6 +565,242 @@ const cancelAppointment = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 }
+
+
+// API to add BP reading
+const addBpReading = async (req, res) => {
+  try {
+    const { userId,systolic, diastolic, pulse, date, time, notes } = req.body;
+
+    // Validate required fields
+    if (!userId || !systolic || !diastolic || !date) {
+      return res.json({ success: false, message: "Missing required fields" });
+    }
+
+    // Validate BP values
+    if (systolic <= diastolic) {
+      return res.json({ success: false, message: "Systolic pressure must be higher than diastolic pressure" });
+    }
+
+    if (systolic < 70 || systolic > 250) {
+      return res.json({ success: false, message: "Systolic pressure must be between 70-250 mmHg" });
+    }
+
+    if (diastolic < 40 || diastolic > 150) {
+      return res.json({ success: false, message: "Diastolic pressure must be between 40-150 mmHg" });
+    }
+
+    if (pulse && (pulse < 40 || pulse > 200)) {
+      return res.json({ success: false, message: "Pulse must be between 40-200 bpm" });
+    }
+
+    // Create new BP reading
+    const readingData = {
+      userId,
+      systolic: parseInt(systolic),
+      diastolic: parseInt(diastolic),
+      pulse: pulse ? parseInt(pulse) : undefined,
+      date,
+      time: time || undefined,
+      notes: notes || undefined,
+      timestamp: Date.now()
+    };
+
+    const newReading = new bpReadingModel(readingData);
+    await newReading.save();
+
+    res.json({ success: true, message: "BP reading saved successfully", reading: newReading });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+
+// API to get all BP readings for a user
+const getBpReadings = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { page = 1, limit = 10, startDate, endDate, category } = req.query;
+
+    if (!userId) {
+      return res.json({ success: false, message: "User ID is required" });
+    }
+
+    // Initialize query object
+    let query = { userId };
+
+    // Date filtering
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) query.date.$gte = startDate;
+      if (endDate) query.date.$lte = endDate;
+    }
+
+    // Category filtering
+    if (category) {
+      query.category = category;
+    }
+
+    // Get readings with pagination
+    const readings = await bpReadingModel.find(query)
+      .sort({ timestamp: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const totalReadings = await bpReadingModel.countDocuments(query);
+
+    // Calculate analytics
+    let analytics = null;
+    if (readings.length > 0) {
+      const totalSystolic = readings.reduce((sum, reading) => sum + reading.systolic, 0);
+      const totalDiastolic = readings.reduce((sum, reading) => sum + reading.diastolic, 0);
+      
+      analytics = {
+        totalReadings,
+        avgSystolic: Math.round(totalSystolic / readings.length),
+        avgDiastolic: Math.round(totalDiastolic / readings.length),
+        latestReading: readings[0] // Since sorted by timestamp desc
+      };
+    }
+
+    res.json({
+      success: true,
+      readings,
+      analytics,
+      totalReadings,
+      totalPages: Math.ceil(totalReadings / limit),
+      currentPage: parseInt(page)
+    });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// API to get BP reading analytics/statistics
+const getBpAnalytics = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { days = 30 } = req.query;
+
+    if (!userId) {
+      return res.json({ success: false, message: "User ID is required" });
+    }
+
+    // Calculate date range
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+
+    // Get readings in date range
+    const readings = await bpReadingModel.find({
+      userId,
+      date: { $gte: startDate, $lte: endDate }
+    }).sort({ timestamp: -1 });
+
+    if (readings.length === 0) {
+      return res.json({
+        success: true,
+        analytics: {
+          totalReadings: 0,
+          avgSystolic: 0,
+          avgDiastolic: 0,
+          avgPulse: 0,
+          categoryDistribution: {},
+          latestReading: null
+        }
+      });
+    }
+
+    // Calculate statistics
+    const totalReadings = readings.length;
+    const avgSystolic = Math.round(readings.reduce((sum, r) => sum + r.systolic, 0) / totalReadings);
+    const avgDiastolic = Math.round(readings.reduce((sum, r) => sum + r.diastolic, 0) / totalReadings);
+    const avgPulse = readings.filter(r => r.pulse).length > 0 
+      ? Math.round(readings.filter(r => r.pulse).reduce((sum, r) => sum + r.pulse, 0) / readings.filter(r => r.pulse).length)
+      : 0;
+
+    // Category distribution
+    const categoryDistribution = {};
+    readings.forEach(reading => {
+      categoryDistribution[reading.category] = (categoryDistribution[reading.category] || 0) + 1;
+    });
+
+    const analytics = {
+      totalReadings,
+      avgSystolic,
+      avgDiastolic,
+      avgPulse,
+      categoryDistribution,
+      latestReading: readings[0]
+    };
+
+    res.json({ success: true, analytics });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+
+// API to update BP reading
+const updateBpReading = async (req, res) => {
+  try {
+    const { readingId } = req.params;
+    const { systolic, diastolic, pulse, notes } = req.body;
+
+    if (!readingId) {
+      return res.json({ success: false, message: "Reading ID is required" });
+    }
+
+    const reading = await bpReadingModel.findById(readingId);
+    if (!reading) {
+      return res.json({ success: false, message: "BP reading not found" });
+    }
+
+    // Validate BP values if provided
+    if (systolic && diastolic && systolic <= diastolic) {
+      return res.json({ success: false, message: "Systolic pressure must be higher than diastolic pressure" });
+    }
+
+    // Update fields
+    if (systolic) reading.systolic = parseInt(systolic);
+    if (diastolic) reading.diastolic = parseInt(diastolic);
+    if (pulse !== undefined) reading.pulse = pulse ? parseInt(pulse) : undefined;
+    if (notes !== undefined) reading.notes = notes;
+
+    await reading.save(); // This will trigger pre-save middleware to update category
+
+    res.json({ success: true, message: "BP reading updated successfully", reading });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+
+// API to delete BP reading
+const deleteBpReading = async (req, res) => {
+  try {
+    const { readingId } = req.params;
+
+    if (!readingId) {
+      return res.json({ success: false, message: "Reading ID is required" });
+    }
+
+    const reading = await bpReadingModel.findByIdAndDelete(readingId);
+    if (!reading) {
+      return res.json({ success: false, message: "BP reading not found" });
+    }
+
+    res.json({ success: true, message: "BP reading deleted successfully" });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+
 export {
   registerUser,
   loginUser,
@@ -572,4 +809,9 @@ export {
   bookAppointment,
   listAppointment,
   cancelAppointment,
+  addBpReading,
+  getBpReadings,
+  getBpAnalytics,
+  updateBpReading,
+  deleteBpReading,
 };
