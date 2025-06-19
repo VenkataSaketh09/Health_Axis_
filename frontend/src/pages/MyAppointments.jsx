@@ -14,11 +14,12 @@ import { toast } from "sonner";
 import { MapPin, Calendar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { assets } from "../assets/assets";
-import { AppContext } from "../context/AppContext"; // Adjust import path as needed
+import { AppContext } from "../context/AppContext";
 import axios from "axios";
 
 const MyAppointments = () => {
-  const { token, backend_url, userData,getDoctorsData} = useContext(AppContext);
+  const { token, backend_url, userData, getDoctorsData } =
+    useContext(AppContext);
   const [activeTab, setActiveTab] = useState("upcoming");
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -183,7 +184,7 @@ const MyAppointments = () => {
         // Refresh appointments after cancellation
         fetchAppointments();
         getDoctorsData(); // Refresh doctors data
-        
+
         // Automatically switch to past tab to show the cancelled appointment
         setActiveTab("expired");
       } else {
@@ -194,6 +195,40 @@ const MyAppointments = () => {
     } catch (error) {
       console.error("Cancel appointment error:", error);
       toast.error("Failed to cancel appointment", {
+        position: "top-right",
+      });
+    }
+  };
+
+  const handlePayOnline = async (appointment) => {
+    try {
+      const { data } = await axios.post(
+        `${backend_url}/api/user/pay-appointment`,
+        { appointmentId: appointment._id, userId: userData?._id },
+        { headers: { token } }
+      );
+
+      if (data.success) {
+        toast.success("Payment Successful", {
+          position: "top-right",
+          style: {
+            background: "#10b981",
+            color: "white",
+            border: "1px solid #059669",
+            fontSize: "15px",
+          },
+          className: "toast-success",
+          duration: 4000,
+        });
+        fetchAppointments(); // Refresh appointments
+      } else {
+        toast.error("Payment failed", {
+          position: "top-right",
+        });
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast.error("Payment failed", {
         position: "top-right",
       });
     }
@@ -244,15 +279,83 @@ const MyAppointments = () => {
             </div>
           </div>
           <div className="flex flex-col space-y-10 mt-5 pb-5">
-            {!appointment.cancelled && (
-              <Button
-                variant="outline"
-                className="border-blue-500 text-blue-500 hover:bg-blue-100 px-6"
-                onClick={() => handlePayOnline(appointment)}
-              >
-                Pay Online
-              </Button>
-            )}
+            {!appointment.cancelled &&
+              (appointment.payment ? (
+                <Button
+                  variant="outline"
+                  className="border-green-500 text-green-500 bg-green-50 px-6 cursor-default"
+                  disabled
+                >
+                  Paid
+                </Button>
+              ) : (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    {!appointment.cancelled &&
+                      activeTab === "upcoming" &&
+                      (appointment.payment ? (
+                        <Button
+                          variant="outline"
+                          className="border-green-500 text-green-500 bg-green-50 px-6 cursor-default"
+                          disabled
+                        >
+                          Paid
+                        </Button>
+                      ) : (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="border-blue-500 text-blue-500 hover:bg-blue-100 px-6"
+                            >
+                              Pay Online
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Confirm Payment
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to proceed with the
+                                payment of ₹{appointment.amount} for your
+                                appointment with {appointment.doctorData?.name}?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handlePayOnline(appointment)}
+                                className="bg-blue-600 hover:bg-blue-700"
+                              >
+                                Pay Now
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      ))}
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirm Payment</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to proceed with the payment of ₹
+                        {appointment.amount} for your appointment with{" "}
+                        {appointment.doctorData?.name}?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handlePayOnline(appointment)}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        Pay Now
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              ))}
             {showCancelButton && !appointment.cancelled && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -284,10 +387,16 @@ const MyAppointments = () => {
                 </AlertDialogContent>
               </AlertDialog>
             )}
-            {appointment.cancelled && (
+            {appointment.cancelled ? (
               <div className="text-red-600 text-md p-10 font-semibold">
                 Appointment Cancelled
               </div>
+            ) : (
+              activeTab === "expired" && (
+                <div className="text-green-600 text-md p-10 font-semibold">
+                  Appointment Completed
+                </div>
+              )
             )}
           </div>
         </div>

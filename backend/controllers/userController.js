@@ -6,6 +6,8 @@ import { v2 as cloudinary } from "cloudinary";
 import doctorModel from "../models/doctorModel.js";
 import appointmentModel from "../models/appointmentModel.js";
 import bpReadingModel from "../models/BPModel.js";
+import DiabetiesReadingModel from "../models/DiabetiesModel.js";
+import pulseReadingModel from "../models/PulseModel.js";
 //API to register user
 const registerUser = async (req, res) => {
   try {
@@ -566,6 +568,31 @@ const cancelAppointment = async (req, res) => {
   }
 }
 
+const payAppointment = async (req, res) => {
+  try {
+    const { userId, appointmentId } = req.body;
+    
+    if (!appointmentId) {
+      return res.json({ success: false, message: "Appointment ID is required" });
+    }
+    
+    const appointmentData = await appointmentModel.findById(appointmentId);
+    if (!appointmentData) {
+      return res.json({ success: false, message: "Appointment not found" });
+    }
+    
+    if (appointmentData.userId !== userId) {
+      return res.json({ success: false, message: "Unauthorized" });
+    }
+    
+    await appointmentModel.findByIdAndUpdate(appointmentId, { payment: true });
+    
+    res.json({ success: true, message: "Payment successful" });
+  } catch (error) {
+    console.log(error.message);
+    res.json({ success: false, message: error.message });
+  }
+};
 
 // API to add BP reading
 const addBpReading = async (req, res) => {
@@ -801,6 +828,677 @@ const deleteBpReading = async (req, res) => {
 };
 
 
+//API to add Diabeties Readings
+const addGlucoseReading = async (req, res) => {
+  try {
+    const { userId, glucose, readingType, date, time, notes } = req.body;
+
+    // Validate required fields
+    if (!userId || !glucose || !readingType || !date) {
+      return res.json({ success: false, message: "Missing required fields" });
+    }
+
+    // Validate glucose value
+    if (glucose < 20 || glucose > 600) {
+      return res.json({ success: false, message: "Glucose level must be between 20-600 mg/dL" });
+    }
+
+    // Validate reading type
+    const validReadingTypes = ['fasting', 'before_meal', 'after_meal', 'bedtime', 'random'];
+    if (!validReadingTypes.includes(readingType)) {
+      return res.json({ 
+        success: false, 
+        message: "Invalid reading type. Must be: fasting, before_meal, after_meal, bedtime, or random" 
+      });
+    }
+
+    // Determine glucose category based on reading type and value
+    const getGlucoseCategory = (glucose, readingType) => {
+      switch (readingType) {
+        case 'fasting':
+          if (glucose < 70) return 'low';
+          if (glucose <= 99) return 'normal';
+          if (glucose <= 125) return 'prediabetic';
+          return 'diabetic';
+        
+        case 'before_meal':
+          if (glucose < 70) return 'low';
+          if (glucose <= 99) return 'normal';
+          if (glucose <= 125) return 'prediabetic';
+          return 'diabetic';
+        
+        case 'after_meal':
+          if (glucose < 70) return 'low';
+          if (glucose <= 139) return 'normal';
+          if (glucose <= 199) return 'prediabetic';
+          return 'diabetic';
+        
+        case 'bedtime':
+          if (glucose < 70) return 'low';
+          if (glucose <= 120) return 'normal';
+          if (glucose <= 160) return 'prediabetic';
+          return 'diabetic';
+        
+        case 'random':
+          if (glucose < 70) return 'low';
+          if (glucose <= 139) return 'normal';
+          if (glucose <= 199) return 'prediabetic';
+          return 'diabetic';
+        
+        default:
+          return 'unknown';
+      }
+    };
+
+    // Create new glucose reading
+    const readingData = {
+      userId,
+      glucose: parseInt(glucose),
+      readingType,
+      category: getGlucoseCategory(glucose, readingType),
+      date,
+      time: time || undefined,
+      notes: notes || undefined,
+      timestamp: Date.now()
+    };
+
+    const newReading = new DiabetiesReadingModel(readingData);
+    await newReading.save();
+
+    res.json({ success: true, message: "Glucose reading saved successfully", reading: newReading });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+
+// API to get all glucose readings for a user
+const getGlucoseReadings = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { page = 1, limit = 10, startDate, endDate, category, readingType } = req.query;
+
+    if (!userId) {
+      return res.json({ success: false, message: "User ID is required" });
+    }
+
+    // Convert to numbers
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
+
+    // Initialize query object
+    let query = { userId };
+
+    // Date filtering
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) query.date.$gte = new Date(startDate);
+      if (endDate) query.date.$lte = new Date(endDate);
+    }
+
+    // Category filtering
+    if (category) {
+      query.category = category;
+    }
+
+    // Reading type filtering
+    if (readingType) {
+      query.readingType = readingType;
+    }
+
+    // Get readings with pagination
+    const readings = await DiabetiesReadingModel.find(query)
+      .sort({ timestamp: -1 })
+      .limit(limitNum)
+      .skip((pageNum - 1) * limitNum);
+
+    const totalReadings = await DiabetiesReadingModel.countDocuments(query);
+
+    // Calculate analytics
+    let analytics = null;
+    if (readings.length > 0) {
+      const totalGlucose = readings.reduce((sum, reading) => sum + reading.glucose, 0);
+      
+      // Category distribution
+      const categoryDistribution = {};
+      readings.forEach(reading => {
+        categoryDistribution[reading.category] = (categoryDistribution[reading.category] || 0) + 1;
+      });
+
+      // Reading type distribution
+      const readingTypeDistribution = {};
+      readings.forEach(reading => {
+        readingTypeDistribution[reading.readingType] = (readingTypeDistribution[reading.readingType] || 0) + 1;
+      });
+      
+      analytics = {
+        totalReadings,
+        avgGlucose: Math.round(totalGlucose / readings.length),
+        categoryDistribution,
+        readingTypeDistribution,
+        latestReading: readings[0]
+      };
+    }
+
+    res.json({
+      success: true,
+      readings,
+      analytics,
+      totalReadings,
+      totalPages: Math.ceil(totalReadings / limitNum),
+      currentPage: pageNum
+    });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+
+// API to get glucose reading analytics/statistics
+const getGlucoseAnalytics = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { days = 30 } = req.query;
+
+    if (!userId) {
+      return res.json({ success: false, message: "User ID is required" });
+    }
+
+    // Calculate date range
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+
+    // Get readings in date range
+    const readings = await DiabetiesReadingModel.find({
+      userId,
+      date: { $gte: startDate, $lte: endDate }
+    }).sort({ timestamp: -1 });
+
+    if (readings.length === 0) {
+      return res.json({
+        success: true,
+        analytics: {
+          totalReadings: 0,
+          avgGlucose: 0,
+          minGlucose: 0,
+          maxGlucose: 0,
+          categoryDistribution: {},
+          readingTypeDistribution: {},
+          timeInRange: {
+            low: 0,
+            normal: 0,
+            high: 0
+          },
+          latestReading: null,
+          estimatedHbA1c: "0.0", // Make it consistent with string format
+        }
+      });
+    }
+
+    // Calculate statistics
+    const totalReadings = readings.length;
+    const glucoseValues = readings.map(r => r.glucose);
+    const avgGlucose = Math.round(readings.reduce((sum, r) => sum + r.glucose, 0) / totalReadings);
+    const minGlucose = Math.min(...glucoseValues);
+    const maxGlucose = Math.max(...glucoseValues);
+
+    // Category distribution
+    const categoryDistribution = {};
+    readings.forEach(reading => {
+      categoryDistribution[reading.category] = (categoryDistribution[reading.category] || 0) + 1;
+    });
+
+    // Reading type distribution
+    const readingTypeDistribution = {};
+    readings.forEach(reading => {
+      readingTypeDistribution[reading.readingType] = (readingTypeDistribution[reading.readingType] || 0) + 1;
+    });
+
+    // Time in range calculation (simplified)
+    const timeInRange = {
+      low: Math.round(((categoryDistribution.low || 0) / totalReadings) * 100),
+      normal: Math.round(((categoryDistribution.normal || 0) / totalReadings) * 100),
+      high: Math.round((((categoryDistribution.prediabetic || 0) + (categoryDistribution.diabetic || 0)) / totalReadings) * 100)
+    };
+
+    // HbA1c estimation (rough calculation based on average glucose)
+    const estimatedHbA1c = ((avgGlucose + 46.7) / 28.7).toFixed(1);
+
+    const analytics = {
+      totalReadings,
+      avgGlucose,
+      minGlucose,
+      maxGlucose,
+      estimatedHbA1c,
+      categoryDistribution,
+      readingTypeDistribution,
+      timeInRange,
+      latestReading: readings[0]
+    };
+
+    res.json({ success: true, analytics });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+
+// API to update glucose reading
+const updateGlucoseReading = async (req, res) => {
+  try {
+    const { readingId } = req.params;
+    const { glucose, readingType, notes } = req.body;
+
+    if (!readingId) {
+      return res.json({ success: false, message: "Reading ID is required" });
+    }
+
+    const reading = await DiabetiesReadingModel.findById(readingId);
+    if (!reading) {
+      return res.json({ success: false, message: "Glucose reading not found" });
+    }
+
+    // Validate glucose value if provided
+    if (glucose && (glucose < 20 || glucose > 600)) {
+      return res.json({ success: false, message: "Glucose level must be between 20-600 mg/dL" });
+    }
+
+    // Validate reading type if provided
+    if (readingType) {
+      const validReadingTypes = ['fasting', 'before_meal', 'after_meal', 'bedtime', 'random'];
+      if (!validReadingTypes.includes(readingType)) {
+        return res.json({ 
+          success: false, 
+          message: "Invalid reading type. Must be: fasting, before_meal, after_meal, bedtime, or random" 
+        });
+      }
+    }
+
+    // Update fields
+    if (glucose) reading.glucose = parseInt(glucose);
+    if (readingType) reading.readingType = readingType;
+    if (notes !== undefined) reading.notes = notes;
+
+    // Recalculate category if glucose or reading type changed
+    if (glucose || readingType) {
+      const getGlucoseCategory = (glucose, readingType) => {
+        switch (readingType) {
+          case 'fasting':
+            if (glucose < 70) return 'low';
+            if (glucose <= 99) return 'normal';
+            if (glucose <= 125) return 'prediabetic';
+            return 'diabetic';
+          
+          case 'before_meal':
+            if (glucose < 70) return 'low';
+            if (glucose <= 99) return 'normal';
+            if (glucose <= 125) return 'prediabetic';
+            return 'diabetic';
+          
+          case 'after_meal':
+            if (glucose < 70) return 'low';
+            if (glucose <= 139) return 'normal';
+            if (glucose <= 199) return 'prediabetic';
+            return 'diabetic';
+          
+          case 'bedtime':
+            if (glucose < 70) return 'low';
+            if (glucose <= 120) return 'normal';
+            if (glucose <= 160) return 'prediabetic';
+            return 'diabetic';
+          
+          case 'random':
+            if (glucose < 70) return 'low';
+            if (glucose <= 139) return 'normal';
+            if (glucose <= 199) return 'prediabetic';
+            return 'diabetic';
+          
+          default:
+            return 'unknown';
+        }
+      };
+
+      reading.category = getGlucoseCategory(reading.glucose, reading.readingType);
+    }
+
+    await reading.save();
+
+    res.json({ success: true, message: "Glucose reading updated successfully", reading });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+
+
+// API to delete glucose reading
+const deleteGlucoseReading = async (req, res) => {
+  try {
+    const { readingId } = req.params;
+    const userId = req.userId;
+
+    if (!readingId) {
+      return res.json({ success: false, message: "Reading ID is required" });
+    }
+
+    const reading = await DiabetiesReadingModel.findOneAndDelete({ 
+      _id: readingId, 
+      userId: userId 
+    });
+
+    if (!reading) {
+      return res.json({ success: false, message: "Glucose reading not found or unauthorized" });
+    }
+
+    res.json({ success: true, message: "Glucose reading deleted successfully" });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+
+// API to get glucose trends (for charts/graphs)
+const getGlucoseTrends = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { days = 7, readingType } = req.query;
+
+    if (!userId) {
+      return res.json({ success: false, message: "User ID is required" });
+    }
+
+    // Calculate date range
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+
+    // Build query
+    let query = {
+      userId,
+      date: { $gte: startDate, $lte: endDate }
+    };
+
+    if (readingType) {
+      query.readingType = readingType;
+    }
+
+    // Get readings
+    const readings = await DiabetiesReadingModel.find(query)
+      .sort({ date: 1, time: 1 });
+
+    // Group by date for trend analysis
+    const trendData = readings.reduce((acc, reading) => {
+      const date = reading.date;
+      if (!acc[date]) {
+        acc[date] = [];
+      }
+      acc[date].push({
+        glucose: reading.glucose,
+        readingType: reading.readingType,
+        time: reading.time || '00:00',
+        category: reading.category
+      });
+      return acc;
+    }, {});
+
+    res.json({ success: true, trendData, totalReadings: readings.length });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+
+// API to add pulse reading
+const addPulseReading = async (req, res) => {
+  try {
+    const { userId, pulse, date, time, notes, activity } = req.body;
+
+    // Validate required fields
+    if (!userId || !pulse || !date) {
+      return res.json({ success: false, message: "Missing required fields" });
+    }
+
+    // Validate pulse values
+    if (pulse < 30 || pulse > 220) {
+      return res.json({ success: false, message: "Pulse rate must be between 30-220 bpm" });
+    }
+
+    // Create new pulse reading
+    const readingData = {
+      userId,
+      pulse: parseInt(pulse),
+      date,
+      time: time || undefined,
+      notes: notes || undefined,
+      activity: activity || undefined,
+      timestamp: Date.now()
+    };
+
+    const newReading = new pulseReadingModel(readingData);
+    await newReading.save();
+
+    res.json({ success: true, message: "Pulse reading saved successfully", reading: newReading });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// API to get all pulse readings for a user
+// API to get all pulse readings for a user
+const getPulseReadings = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { page = 1, limit = 10, startDate, endDate, activity } = req.query;
+
+    if (!userId) {
+      return res.json({ success: false, message: "User ID is required" });
+    }
+
+    // Initialize query object
+    let query = { userId };
+
+    // Date filtering
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) query.date.$gte = startDate;
+      if (endDate) query.date.$lte = endDate;
+    }
+
+    // Activity filtering
+    if (activity) {
+      query.activity = activity;
+    }
+
+    // Get readings with pagination
+    const readings = await pulseReadingModel.find(query)
+      .sort({ timestamp: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const totalReadings = await pulseReadingModel.countDocuments(query);
+
+    // Calculate analytics
+    let analytics = null;
+    if (readings.length > 0) {
+      const totalPulse = readings.reduce((sum, reading) => sum + reading.pulse, 0);
+      const avgPulse = Math.round(totalPulse / readings.length);
+      
+      // Find min and max pulse
+      const pulseValues = readings.map(r => r.pulse);
+      const minPulse = Math.min(...pulseValues);
+      const maxPulse = Math.max(...pulseValues);
+      
+      // Calculate resting heart rate (average of readings marked as 'resting' or lowest 25%)
+      const restingReadings = readings.filter(r => r.activity === 'resting');
+      const restingHeartRate = restingReadings.length > 0 
+        ? Math.round(restingReadings.reduce((sum, r) => sum + r.pulse, 0) / restingReadings.length)
+        : Math.round(pulseValues.sort((a, b) => a - b).slice(0, Math.ceil(readings.length * 0.25)).reduce((sum, p) => sum + p, 0) / Math.ceil(readings.length * 0.25));
+
+      // Activity distribution
+      const activityDistribution = {};
+      readings.forEach(reading => {
+        const activity = reading.activity || 'unspecified';
+        activityDistribution[activity] = (activityDistribution[activity] || 0) + 1;
+      });
+      
+      analytics = {
+        totalReadings,
+        avgPulse,
+        minPulse,
+        maxPulse,
+        restingHeartRate, // This was missing!
+        activityDistribution, // This was also missing!
+        latestReading: readings[0] // Since sorted by timestamp desc
+      };
+    }
+
+    res.json({
+      success: true,
+      readings,
+      analytics,
+      totalReadings,
+      totalPages: Math.ceil(totalReadings / limit),
+      currentPage: parseInt(page)
+    });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// API to get pulse reading analytics/statistics
+const getPulseAnalytics = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { days = 30 } = req.query;
+
+    if (!userId) {
+      return res.json({ success: false, message: "User ID is required" });
+    }
+
+    // Calculate date range
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000)).toISOString().split('T')[0];
+
+    // Get readings in date range
+    const readings = await pulseReadingModel.find({
+      userId,
+      date: { $gte: startDate, $lte: endDate }
+    }).sort({ timestamp: -1 });
+
+    if (readings.length === 0) {
+      return res.json({
+        success: true,
+        analytics: {
+          totalReadings: 0,
+          avgPulse: 0,
+          minPulse: 0,
+          maxPulse: 0,
+          restingHeartRate: 0,
+          activityDistribution: {},
+          latestReading: null
+        }
+      });
+    }
+
+    // Calculate statistics
+    const totalReadings = readings.length;
+    const pulseValues = readings.map(r => r.pulse);
+    const avgPulse = Math.round(pulseValues.reduce((sum, p) => sum + p, 0) / totalReadings);
+    const minPulse = Math.min(...pulseValues);
+    const maxPulse = Math.max(...pulseValues);
+
+    // Calculate resting heart rate (average of readings marked as 'resting' or lowest 25%)
+    const restingReadings = readings.filter(r => r.activity === 'resting');
+    const restingHeartRate = restingReadings.length > 0 
+      ? Math.round(restingReadings.reduce((sum, r) => sum + r.pulse, 0) / restingReadings.length)
+      : Math.round(pulseValues.sort((a, b) => a - b).slice(0, Math.ceil(totalReadings * 0.25)).reduce((sum, p) => sum + p, 0) / Math.ceil(totalReadings * 0.25));
+
+    // Activity distribution
+    const activityDistribution = {};
+    readings.forEach(reading => {
+      const activity = reading.activity || 'unspecified';
+      activityDistribution[activity] = (activityDistribution[activity] || 0) + 1;
+    });
+
+    const analytics = {
+      totalReadings,
+      avgPulse,
+      minPulse,
+      maxPulse,
+      restingHeartRate,
+      activityDistribution,
+      latestReading: readings[0]
+    };
+
+    res.json({ success: true, analytics });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// API to update pulse reading
+const updatePulseReading = async (req, res) => {
+  try {
+    const { readingId } = req.params;
+    const { pulse, notes, activity } = req.body;
+
+    if (!readingId) {
+      return res.json({ success: false, message: "Reading ID is required" });
+    }
+
+    const reading = await pulseReadingModel.findById(readingId);
+    if (!reading) {
+      return res.json({ success: false, message: "Pulse reading not found" });
+    }
+
+    // Validate pulse value if provided
+    if (pulse && (pulse < 30 || pulse > 220)) {
+      return res.json({ success: false, message: "Pulse rate must be between 30-220 bpm" });
+    }
+
+    // Update fields
+    if (pulse) reading.pulse = parseInt(pulse);
+    if (notes !== undefined) reading.notes = notes;
+    if (activity !== undefined) reading.activity = activity;
+
+    await reading.save();
+
+    res.json({ success: true, message: "Pulse reading updated successfully", reading });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// API to delete pulse reading
+const deletePulseReading = async (req, res) => {
+  try {
+    const { readingId } = req.params;
+
+    if (!readingId) {
+      return res.json({ success: false, message: "Reading ID is required" });
+    }
+
+    const reading = await pulseReadingModel.findByIdAndDelete(readingId);
+    if (!reading) {
+      return res.json({ success: false, message: "Pulse reading not found" });
+    }
+
+    res.json({ success: true, message: "Pulse reading deleted successfully" });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
 export {
   registerUser,
   loginUser,
@@ -809,9 +1507,25 @@ export {
   bookAppointment,
   listAppointment,
   cancelAppointment,
+  payAppointment,
+
   addBpReading,
   getBpReadings,
   getBpAnalytics,
   updateBpReading,
   deleteBpReading,
+
+  addGlucoseReading,
+  getGlucoseReadings,
+  getGlucoseAnalytics,
+  updateGlucoseReading,
+  deleteGlucoseReading,
+  getGlucoseTrends,
+
+  addPulseReading,
+  getPulseAnalytics,
+  getPulseReadings,
+  updatePulseReading,
+  deletePulseReading
+
 };
