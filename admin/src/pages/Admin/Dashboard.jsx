@@ -52,14 +52,27 @@ const Dashboard = () => {
           </div>
           <div className="pt-4 border border-t-0">
             {dashData.latest_appointments.map((item, index) => (
-              <div  className="flex items-center px-6 py-3 gap-3 hover:bg-gray-100" key={index}>
-                <img className="rounded-full w-10" src={item.doctorData.image} alt="doctor" />
+              <div
+                className="flex items-center px-6 py-3 gap-3 hover:bg-gray-100"
+                key={index}
+              >
+                <img
+                  className="rounded-full w-10"
+                  src={item.doctorData.image}
+                  alt="doctor"
+                />
                 <div className="flex-1 text-sm">
-                  <p className="text-gray-800 font-medium">{item.doctorData.name}</p>
+                  <p className="text-gray-800 font-medium">
+                    {item.doctorData.name}
+                  </p>
                   <p className="text-gray-600">{item.slotDate}</p>
                 </div>
                 {item.cancelled ? (
-                  <p className="text-red-400 text-xs font-medium">Cancelled</p>
+                  <p className="text-red-400 text-sm font-medium">Cancelled</p>
+                ) : item.isCompletd ? (
+                  <p className="text-green-400 text-sm font-medium">
+                    Completed
+                  </p>
                 ) : (
                   <img
                     className="w-10 cursor-pointer"

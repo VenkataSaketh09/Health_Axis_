@@ -356,7 +356,7 @@ const MyAppointments = () => {
                   </AlertDialogContent>
                 </AlertDialog>
               ))}
-            {showCancelButton && !appointment.cancelled && (
+            {showCancelButton && !appointment.cancelled && !appointment.isCompleted && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button

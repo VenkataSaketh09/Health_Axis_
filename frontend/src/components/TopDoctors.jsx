@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useContext } from "react";
 import { AppContext } from "../context/AppContext";
+import { Clock } from "lucide-react";
 const TopDoctors = () => {
   const navigate = useNavigate();
   const { doctors } = useContext(AppContext);
@@ -24,12 +25,26 @@ const TopDoctors = () => {
           >
             <img src={value.image} alt="image" className="bg-blue-50" />
             <div className="p-4">
-              <div className="flex items-center gap-2 text-sm text-center text-gray-800">
-                <p className="w-2 h-2 bg-green-500 rounded-full"></p>
-                <p>Available</p>
+              <div
+                className={`flex items-center gap-2 text-sm text-center ${
+                  value.available ? "text-green-500" : "text-red-600"
+                }`}
+              >
+                <p
+                  className={`w-2 h-2  ${
+                    value.available
+                      ? "bg-green-500 rounded-full"
+                      : "bg-red-600 rounded-full"
+                  }`}
+                ></p>
+                <p>{value.available ? "Available" : "Not Available"}</p>
               </div>
               <p className="text-gray-900 text-lg font-medium">{value.name}</p>
               <p className="text-blue-900 text-base ">{value.speciality}</p>
+              <div className="flex items-center text-blue-500 text-sm">
+                <Clock className="w-4 h-4 mr-2 text-blue-500" />
+                {value.experience}
+              </div>
             </div>
           </div>
         ))}
