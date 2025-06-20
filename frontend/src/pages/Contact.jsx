@@ -42,7 +42,7 @@ const Contact = () => {
             {/* Careers Section */}
             <div>
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                CAREERS AT PRESCRIPTO
+                CAREERS AT Health Axis
               </h2>
               <p className="text-gray-700 mb-6">
                 Learn more about our teams and job openings.

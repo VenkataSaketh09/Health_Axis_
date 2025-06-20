@@ -25,18 +25,18 @@ const About = () => {
           {/* Text Content */}
           <div className="space-y-6">
             <p className="text-gray-700 leading-relaxed">
-              Welcome to Prescripto, your trusted partner in managing your
-              healthcare needs conveniently and efficiently. At Prescripto, we
+              Welcome to Health Axis, your trusted partner in managing your
+              healthcare needs conveniently and efficiently. At Health Axis, we
               understand the challenges individuals face when it comes to
               scheduling doctor appointments and managing their health records.
             </p>
 
             <p className="text-gray-700 leading-relaxed">
-              Prescripto is committed to excellence in healthcare technology. We
+              Health Axis is committed to excellence in healthcare technology. We
               continuously strive to enhance our platform, integrating the
               latest advancements to improve user experience and deliver
               superior service. Whether you're booking your first appointment or
-              managing ongoing care, Prescripto is here to support you every
+              managing ongoing care, Health Axis is here to support you every
               step of the way.
             </p>
 
@@ -45,7 +45,7 @@ const About = () => {
                 Our Vision
               </h3>
               <p className="text-gray-700 leading-relaxed">
-                Our vision at Prescripto is to create a seamless healthcare
+                Our vision at Health Axis is to create a seamless healthcare
                 experience for every user. We aim to bridge the gap between
                 patients and healthcare providers, making it easier for you to
                 access the care you need, when you need it.
