@@ -40,7 +40,7 @@ const NavBar = () => {
         </NavLink>
         <li
           className="py-1 cursor-pointer border-violet-500 bg-slate-100 rounded-md p-5"
-          onClick={() => window.open("http://localhost:5174", "_blank")}
+          onClick={() => window.open("https://health-axis-admin.vercel.app/", "_blank")}
         >
           ADMIN
         </li>
@@ -119,7 +119,7 @@ const NavBar = () => {
             <p
               onClick={() => {
                 setShowMenu(false);
-                window.open("http://localhost:5174", "_blank");
+                window.open("https://health-axis-admin.vercel.app/", "_blank");
               }}
               className="px-4 py-2 rounded inline-block cursor-pointer border-violet-500 bg-slate-300"
             >
