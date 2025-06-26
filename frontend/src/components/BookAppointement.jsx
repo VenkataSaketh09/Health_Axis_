@@ -16,7 +16,7 @@ import { AppContext } from "@/context/AppContext";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-
+import { useParams } from "react-router-dom";
 const BookAppointement = ({ doctor }) => {
   const navigate = useNavigate();
   const [date, setDate] = useState(new Date());
@@ -24,8 +24,10 @@ const BookAppointement = ({ doctor }) => {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
   const [bookedSlots, setBookedSlots] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  const { backend_url, token, getDoctorsData, userData } = useContext(AppContext);
+  const { docId } = useParams();
+  const { backend_url, token, getDoctorsData, userData, doctors } =
+    useContext(AppContext);
+  const currentDoctor = doctors.find((doc) => doc._id === docId);
 
   const isPastDay = (day) => {
     const today = new Date();
@@ -56,22 +58,22 @@ const BookAppointement = ({ doctor }) => {
 
   const getBookedSlots = () => {
     if (!doctor || !date) return;
-    
+
     // Format date to match your API format (assuming YYYY-MM-DD or similar)
-    const formattedDate = date.toISOString().split('T')[0];
-    
+    const formattedDate = date.toISOString().split("T")[0];
+
     // Get booked slots for the selected date from doctor's slots_booked
     const slotsForDate = doctor.slots_booked?.[formattedDate] || [];
     setBookedSlots(slotsForDate);
   };
 
   const formatDateForAPI = (date) => {
-  // Use local date components to avoid timezone issues
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+    // Use local date components to avoid timezone issues
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
   const formattedDate = new Intl.DateTimeFormat("en-US", {
     month: "long",
@@ -92,9 +94,11 @@ const BookAppointement = ({ doctor }) => {
 
     // Get userId from userData
     const currentUserId = userData?._id || userData?.id;
-    
+
     if (!doctor || !currentUserId) {
-      toast.error("Missing required information. Please ensure you are logged in.");
+      toast.error(
+        "Missing required information. Please ensure you are logged in."
+      );
       console.log("Debug - doctor:", doctor);
       console.log("Debug - userData:", userData);
       console.log("Debug - currentUserId:", currentUserId);
@@ -111,17 +115,22 @@ const BookAppointement = ({ doctor }) => {
         userId: currentUserId,
         doctorId: doctor._id,
         slotDate: slotDate,
-        slotTime: slotTime
+        slotTime: slotTime,
       };
 
       const { data } = await axios.post(
-        backend_url + "/api/user/book-appointment", 
+        backend_url + "/api/user/book-appointment",
         requestData,
         { headers: { token } }
       );
 
       if (data.success) {
-        toast.success("Appointment booked successfully Booked for " + formattedDate + " at " + slotTime);
+        toast.success(
+          "Appointment booked successfully Booked for " +
+            formattedDate +
+            " at " +
+            slotTime
+        );
         // Reset form
         setSelectedTimeSlot("");
         setDate(new Date());
@@ -129,13 +138,16 @@ const BookAppointement = ({ doctor }) => {
         if (getDoctorsData) {
           await getDoctorsData();
         }
-        navigate('/my-appointments');
+        navigate("/my-appointments");
       } else {
         toast.error(data.message || "Failed to book appointment");
       }
     } catch (error) {
       console.error("Error booking appointment:", error);
-      toast.error("Error booking appointment: " + (error.response?.data?.message || error.message));
+      toast.error(
+        "Error booking appointment: " +
+          (error.response?.data?.message || error.message)
+      );
     } finally {
       setIsLoading(false);
     }
@@ -185,23 +197,49 @@ const BookAppointement = ({ doctor }) => {
                     <Clock className="text-blue-600 h-5 w-5" />
                     Select Time Slot
                   </h2>
+
                   <div className="grid grid-cols-3 gap-2 border rounded-lg p-4 max-h-60 overflow-y-auto">
                     {slot?.map((value, index) => {
                       const isBooked = isSlotBooked(value.time);
+                      const isDoctorUnavailable = !currentDoctor?.available;
+
+                      const handleSlotClick = () => {
+                        if (isBooked) return;
+
+                        if (isDoctorUnavailable) {
+                          // Show toast notification for doctor unavailability
+                          toast.error(
+                            "Doctor is currently unavailable for appointments"
+                          );
+                          return;
+                        }
+
+                        setSelectedTimeSlot(value.time);
+                      };
+
                       return (
                         <h2
                           key={index}
-                          onClick={() => !isBooked && setSelectedTimeSlot(value.time)}
+                          onClick={handleSlotClick}
                           className={`p-2 border rounded-full text-center text-xs cursor-pointer transition-colors ${
                             isBooked
                               ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                              : isDoctorUnavailable
+                              ? "bg-orange-100 text-orange-600 cursor-pointer"
                               : value.time === selectedTimeSlot
                               ? "bg-blue-600 text-white"
                               : "text-gray-900 hover:bg-blue-600 hover:text-white"
                           }`}
                         >
                           {value.time}
-                          {isBooked && <div className="text-xs text-red-500">Booked</div>}
+                          {isBooked && (
+                            <div className="text-xs text-red-500">Booked</div>
+                          )}
+                          {isDoctorUnavailable && (
+                            <div className="text-xs text-orange-500">
+                              Unavailable
+                            </div>
+                          )}
                         </h2>
                       );
                     })}

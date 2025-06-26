@@ -443,7 +443,17 @@ const GlucoseMonitor = () => {
       fullDate: reading.date,
       time: reading.time,
     }))
-    .reverse();
+    .sort((a, b) => {
+      // First sort by date
+      const dateComparison = new Date(a.fullDate) - new Date(b.fullDate);
+      if (dateComparison !== 0) return dateComparison;
+
+      // If dates are same, sort by time
+      if (!a.time && !b.time) return 0;
+      if (!a.time) return -1; // readings without time come first
+      if (!b.time) return 1;
+      return a.time.localeCompare(b.time);
+    });
 
   const pieData =
     analytics && analytics.categoryDistribution

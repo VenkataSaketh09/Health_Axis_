@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from "react";
 import {
   LineChart,
@@ -10,7 +9,7 @@ import {
   Legend,
   ResponsiveContainer,
   AreaChart,
-  Area
+  Area,
 } from "recharts";
 import {
   Heart,
@@ -23,7 +22,7 @@ import {
   RefreshCw,
   AlertCircle,
   Activity,
-  Target
+  Target,
 } from "lucide-react";
 import { AppContext } from "@/context/AppContext";
 import axios from "axios";
@@ -60,7 +59,7 @@ const PulseRateMonitor = () => {
     { value: "relaxed", label: "Relaxed" },
     { value: "morning", label: "Morning" },
     { value: "evening", label: "Evening" },
-    { value: "other", label: "Other" }
+    { value: "other", label: "Other" },
   ];
 
   const fetchReadings = async (page = 1) => {
@@ -101,7 +100,7 @@ const PulseRateMonitor = () => {
     setSuccess("");
 
     try {
-      const {data}= await axios.post(
+      const { data } = await axios.post(
         `${backend_url}/api/user/pulse-readings`,
         readingData,
         {
@@ -139,7 +138,7 @@ const PulseRateMonitor = () => {
     setSuccess("");
 
     try {
-      const {data} = await axios.put(
+      const { data } = await axios.put(
         `${backend_url}/api/user/pulse-readings/${id}`,
         readingData,
         {
@@ -163,9 +162,7 @@ const PulseRateMonitor = () => {
         setError(data.message || "Failed to update reading");
       }
     } catch (err) {
-      setError(
-        err?.data?.message || "Network error. Please try again."
-      );
+      setError(err?.data?.message || "Network error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -242,7 +239,7 @@ const PulseRateMonitor = () => {
     setError("");
 
     try {
-      const {data} = await axios.delete(
+      const { data } = await axios.delete(
         `${backend_url}/api/user/pulse-readings/${id}`,
         {
           headers: { token },
@@ -273,7 +270,17 @@ const PulseRateMonitor = () => {
       fullDate: reading.date,
       time: reading.time,
     }))
-    .reverse();
+    .sort((a, b) => {
+      // First sort by date
+      const dateComparison = new Date(a.fullDate) - new Date(b.fullDate);
+      if (dateComparison !== 0) return dateComparison;
+
+      // If dates are same, sort by time
+      if (!a.time && !b.time) return 0;
+      if (!a.time) return -1; // readings without time come first
+      if (!b.time) return 1;
+      return a.time.localeCompare(b.time);
+    });
 
   const getPulseCategory = (pulse) => {
     if (pulse < 60) return { category: "Bradycardia", color: "text-blue-600" };
@@ -292,7 +299,10 @@ const PulseRateMonitor = () => {
           }`}</p>
           <p className="text-red-500">{`Pulse: ${data.pulse} bpm`}</p>
           {data.activity && (
-            <p className="text-blue-500">{`Activity: ${data.activity.replace('_', ' ')}`}</p>
+            <p className="text-blue-500">{`Activity: ${data.activity.replace(
+              "_",
+              " "
+            )}`}</p>
           )}
         </div>
       );
@@ -458,7 +468,7 @@ const PulseRateMonitor = () => {
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">Select activity...</option>
-                    {activityOptions.map(option => (
+                    {activityOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
@@ -592,11 +602,14 @@ const PulseRateMonitor = () => {
                           <div className="flex items-center">
                             <Calendar className="w-4 h-4 text-gray-400 mr-2" />
                             <span className="text-sm text-gray-900">
-                              {new Date(reading.date).toLocaleDateString("en-US", {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                              })}
+                              {new Date(reading.date).toLocaleDateString(
+                                "en-US",
+                                {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                }
+                              )}
                             </span>
                           </div>
                         </td>
@@ -623,7 +636,9 @@ const PulseRateMonitor = () => {
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap">
                           <span className="text-sm text-gray-900 capitalize">
-                            {reading.activity ? reading.activity.replace('_', ' ') : "Not specified"}
+                            {reading.activity
+                              ? reading.activity.replace("_", " ")
+                              : "Not specified"}
                           </span>
                         </td>
                         <td className="px-4 py-4">
@@ -659,7 +674,9 @@ const PulseRateMonitor = () => {
                         <Activity className="w-12 h-12 mb-4 text-gray-300" />
                         <p className="text-lg font-medium">No readings found</p>
                         <p className="text-sm">
-                          {loading ? "Loading..." : "Add your first pulse reading to get started"}
+                          {loading
+                            ? "Loading..."
+                            : "Add your first pulse reading to get started"}
                         </p>
                       </div>
                     </td>
@@ -674,14 +691,18 @@ const PulseRateMonitor = () => {
             <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
               <div className="flex justify-between flex-1 sm:hidden">
                 <button
-                  onClick={() => currentPage > 1 && fetchReadings(currentPage - 1)}
+                  onClick={() =>
+                    currentPage > 1 && fetchReadings(currentPage - 1)
+                  }
                   disabled={currentPage === 1 || loading}
                   className="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
                 <button
-                  onClick={() => currentPage < totalPages && fetchReadings(currentPage + 1)}
+                  onClick={() =>
+                    currentPage < totalPages && fetchReadings(currentPage + 1)
+                  }
                   disabled={currentPage === totalPages || loading}
                   className="relative ml-3 inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -697,7 +718,10 @@ const PulseRateMonitor = () => {
                     </span>{" "}
                     to{" "}
                     <span className="font-medium">
-                      {Math.min(currentPage * 10, analytics?.totalReadings || 0)}
+                      {Math.min(
+                        currentPage * 10,
+                        analytics?.totalReadings || 0
+                      )}
                     </span>{" "}
                     of{" "}
                     <span className="font-medium">
@@ -712,12 +736,18 @@ const PulseRateMonitor = () => {
                     aria-label="Pagination"
                   >
                     <button
-                      onClick={() => currentPage > 1 && fetchReadings(currentPage - 1)}
+                      onClick={() =>
+                        currentPage > 1 && fetchReadings(currentPage - 1)
+                      }
                       disabled={currentPage === 1 || loading}
                       className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="sr-only">Previous</span>
-                      <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <svg
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
                         <path
                           fillRule="evenodd"
                           d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
@@ -755,12 +785,19 @@ const PulseRateMonitor = () => {
                     })}
 
                     <button
-                      onClick={() => currentPage < totalPages && fetchReadings(currentPage + 1)}
+                      onClick={() =>
+                        currentPage < totalPages &&
+                        fetchReadings(currentPage + 1)
+                      }
                       disabled={currentPage === totalPages || loading}
                       className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="sr-only">Next</span>
-                      <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <svg
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
                         <path
                           fillRule="evenodd"
                           d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
@@ -784,31 +821,44 @@ const PulseRateMonitor = () => {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-white p-4 rounded-lg border border-blue-200">
-                <h4 className="font-medium text-gray-800 mb-2">Pulse Rate Status</h4>
+                <h4 className="font-medium text-gray-800 mb-2">
+                  Pulse Rate Status
+                </h4>
                 <div className="space-y-2">
                   {analytics.avgPulse < 60 && (
                     <div className="flex items-center gap-2 text-blue-600">
                       <AlertCircle className="w-4 h-4" />
-                      <span className="text-sm">Your average pulse is below normal range. Consider consulting a healthcare provider.</span>
+                      <span className="text-sm">
+                        Your average pulse is below normal range. Consider
+                        consulting a healthcare provider.
+                      </span>
                     </div>
                   )}
                   {analytics.avgPulse >= 60 && analytics.avgPulse <= 100 && (
                     <div className="flex items-center gap-2 text-green-600">
                       <Heart className="w-4 h-4" />
-                      <span className="text-sm">Your average pulse is within the normal range. Keep up the good work!</span>
+                      <span className="text-sm">
+                        Your average pulse is within the normal range. Keep up
+                        the good work!
+                      </span>
                     </div>
                   )}
                   {analytics.avgPulse > 100 && (
                     <div className="flex items-center gap-2 text-yellow-600">
                       <AlertCircle className="w-4 h-4" />
-                      <span className="text-sm">Your average pulse is elevated. Monitor closely and consult healthcare provider if concerned.</span>
+                      <span className="text-sm">
+                        Your average pulse is elevated. Monitor closely and
+                        consult healthcare provider if concerned.
+                      </span>
                     </div>
                   )}
                 </div>
               </div>
-              
+
               <div className="bg-white p-4 rounded-lg border border-blue-200">
-                <h4 className="font-medium text-gray-800 mb-2">Recommendations</h4>
+                <h4 className="font-medium text-gray-800 mb-2">
+                  Recommendations
+                </h4>
                 <div className="text-sm text-gray-600 space-y-1">
                   <p>• Take readings at consistent times daily</p>
                   <p>• Record activity context for better insights</p>
@@ -821,29 +871,36 @@ const PulseRateMonitor = () => {
         )}
 
         {/* Activity Distribution Chart */}
-        {analytics && analytics.activityDistribution && Object.keys(analytics.activityDistribution).length > 0 && (
-          <div className="mt-6 bg-white p-6 rounded-lg border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5" />
-              Activity Distribution
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Object.entries(analytics.activityDistribution).map(([activity, count]) => (
-                <div key={activity} className="text-center p-3 bg-gray-50 rounded-lg">
-                  <p className="text-2xl font-bold text-gray-800">{count}</p>
-                  <p className="text-sm text-gray-600 capitalize">
-                    {activity.replace('_', ' ')}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+        {analytics &&
+          analytics.activityDistribution &&
+          Object.keys(analytics.activityDistribution).length > 0 && (
+            <div className="mt-6 bg-white p-6 rounded-lg border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5" />
+                Activity Distribution
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {Object.entries(analytics.activityDistribution).map(
+                  ([activity, count]) => (
+                    <div
+                      key={activity}
+                      className="text-center p-3 bg-gray-50 rounded-lg"
+                    >
+                      <p className="text-2xl font-bold text-gray-800">
+                        {count}
+                      </p>
+                      <p className="text-sm text-gray-600 capitalize">
+                        {activity.replace("_", " ")}
+                      </p>
+                    </div>
+                  )
                 )}
+              </div>
+            </div>
+          )}
       </div>
     </div>
-  ); 
+  );
 };
-
-    
 
 export default PulseRateMonitor;
